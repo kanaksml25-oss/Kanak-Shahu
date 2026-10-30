@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dice Rolling Simulator</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #eaf2f8;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            width: 80%;
+            max-width: 650px;
+            margin: auto;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 0 10px gray;
+        }
+
+        h1 {
+            color: #24527a;
+        }
+
+        input {
+            padding: 10px;
+            margin: 8px;
+            width: 150px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 6px;
+            border: none;
+            border-radius: 6px;
+            background: #24527a;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #3678aa;
+        }
+
+        #result {
+            font-size: 25px;
+            color: #e67e22;
+            margin: 20px;
+        }
+
+        .section {
+            background: #f4f7f9;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🎲 Dice Rolling Simulator</h1>
+
+    <label>Number of Dice Sides:</label><br>
+    <input type="number" id="sides" value="6" min="2">
+
+    <br>
+
+    <label>Number of Dice to Roll:</label><br>
+    <input type="number" id="numDice" value="1" min="1">
+
+    <br>
+
+    <button onclick="rollDice()">Roll Dice</button>
+    <button onclick="showHistory()">View History</button>
+    <button onclick="showStatistics()">View Statistics</button>
+    <button onclick="clearHistory()">Clear History</button>
+
+    <div id="result">Results will appear here</div>
+
+    <div class="section">
+        <h3>Roll History</h3>
+        <p id="history">No rolls yet.</p>
+    </div>
+
+    <div class="section">
+        <h3>Dice Statistics</h3>
+        <p id="statistics">No statistics available.</p>
+        <canvas id="graph" width="450" height="220"></canvas>
+    </div>
+
+</div>
+
+<script>
+
+let history = JSON.parse(
+    localStorage.getItem("diceHistory") || "[]"
+);
+
+function rollDice() {
+
+    let sides = Number(document.getElementById("sides").value);
+    let num = Number(document.getElementById("numDice").value);
+
+    if (!Number.isInteger(sides) || sides < 2 ||
+        !Number.isInteger(num) || num <= 0) {
+        alert("Enter valid numbers.");
+        return;
+    }
+
+    let results = [];
+
+    for (let i = 0; i < num; i++) {
+
+        let number = Math.floor(Math.random() * sides) + 1;
+
+        results.push(number);
+        history.push(number);
+    }
+
+    localStorage.setItem("diceHistory", JSON.stringify(history));
+
+    document.getElementById("result").innerHTML =
+        "🎲 You rolled: " + results.join(", ");
+
+    showHistory();
+}
+
+function showHistory() {
+
+    if (history.length === 0) {
+        document.getElementById("history").innerHTML =
+            "No rolls yet.";
+    } else {
+        document.getElementById("history").innerHTML =
+            history.join(", ");
+    }
+}
+
+function showStatistics() {
+
+    if (history.length === 0) {
+        document.getElementById("statistics").innerHTML =
+            "No rolls yet.";
+        return;
+    }
+
+    let total = history.length;
+    let highest = Math.max(...history);
+    let lowest = Math.min(...history);
+
+    let sum = history.reduce((a, b) => a + b, 0);
+    let average = (sum / total).toFixed(2);
+
+    let sides = Number(document.getElementById("sides").value);
+
+    let counts = [];
+
+    for (let i = 1; i <= sides; i++) {
+        counts.push(history.filter(x => x === i).length);
+    }
+
+    document.getElementById("statistics").innerHTML =
+        "Total Rolls: " + total +
+        "<br>Highest Roll: " + highest +
+        "<br>Lowest Roll: " + lowest +
+        "<br>Average Roll: " + average +
+        "<br><br>Number Frequency: " + counts.join(", ");
+
+    drawGraph(counts);
+}
+
+function drawGraph(counts) {
+
+    let canvas = document.getElementById("graph");
+    let ctx = canvas.getContext("2d");
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    let max = Math.max(...counts, 1);
+    let barWidth = Math.min(40, 400 / counts.length);
+
+    counts.forEach((count, index) => {
+
+        let height = (count / max) * 150;
+        let x = 30 + index * (400 / counts.length);
+        let y = 180 - height;
+
+        ctx.fillStyle = "steelblue";
+        ctx.fillRect(x, y, barWidth, height);
+
+        ctx.fillStyle = "black";
+        ctx.fillText(count, x + 10, y - 5);
+        ctx.fillText(index + 1, x + 10, 200);
+    });
+}
+
+function clearHistory() {
+
+    history = [];
+
+    localStorage.removeItem("diceHistory");
+
+    document.getElementById("result").innerHTML =
+        "History cleared.";
+
+    document.getElementById("history").innerHTML =
+        "No rolls yet.";
+
+    document.getElementById("statistics").innerHTML =
+        "No statistics available.";
+
+    document.getElementById("graph").getContext("2d")
+        .clearRect(0, 0, 450, 220);
+}
+
+showHistory();
+
+</script>
+
+</body>
+</html>
