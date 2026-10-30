@@ -1,0 +1,212 @@
+import random
+import os
+
+HISTORY_FILE = "dice_history.txt"
+
+# Where the dots go on each dice face (x, y between 0 and 1)
+DOT_POSITIONS = {
+    1: [(0.5, 0.5)],
+    2: [(0.25, 0.75), (0.75, 0.25)],
+    3: [(0.25, 0.75), (0.5, 0.5), (0.75, 0.25)],
+    4: [(0.25, 0.25), (0.25, 0.75),
+        (0.75, 0.25), (0.75, 0.75)],
+    5: [(0.25, 0.25), (0.25, 0.75),
+        (0.5, 0.5), (0.75, 0.25), (0.75, 0.75)],
+    6: [(0.25, 0.25), (0.25, 0.5), (0.25, 0.75),
+        (0.75, 0.25), (0.75, 0.5), (0.75, 0.75)],
+}
+
+
+class Dice:
+
+    def __init__(self, sides):
+        self.sides = sides
+        self.history = []
+        self.load_history()
+
+    def roll(self, num_dice):
+        results = []
+
+        for i in range(num_dice):
+            number = random.randint(1, self.sides)
+            results.append(number)
+            self.history.append(number)
+
+        self.save_history()
+        return results
+
+    def show_history(self):
+        if len(self.history) == 0:
+            print("No rolls yet.")
+        else:
+            print("Roll history:", self.history)
+
+    def show_statistics(self):
+        if len(self.history) == 0:
+            print("No rolls yet, so no statistics.")
+            return
+
+        print("Total rolls:", len(self.history))
+        print("Highest roll:", max(self.history))
+        print("Lowest roll:", min(self.history))
+        print("Average roll:",
+              round(sum(self.history) / len(self.history), 2))
+
+        print("\nHow many times each number appeared:")
+
+        counts = []
+
+        for face in range(1, self.sides + 1):
+            count = self.history.count(face)
+            counts.append(count)
+            print(face, ":", count, "times")
+
+        self.show_graph(counts)
+
+    def show_graph(self, counts):
+        try:
+            import matplotlib.pyplot as plt
+            from matplotlib.patches import Circle, FancyBboxPatch
+
+            faces = list(range(1, self.sides + 1))
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+            bars = ax.bar(faces, counts,
+                          color="steelblue", width=0.8)
+
+            ax.bar_label(bars)
+
+            ax.set_xlim(0.4, self.sides + 0.6)
+            ax.set_ylabel("Number of Times Rolled")
+            ax.set_title("Dice Roll Statistics")
+
+            if self.sides <= 6:
+
+                ax.set_xticks([])
+                fig.subplots_adjust(bottom=0.28)
+
+                for face in faces:
+
+                    x_center = (face - 0.4) / (self.sides + 0.2)
+                    width = 0.7 / (self.sides + 0.2)
+
+                    face_ax = ax.inset_axes(
+                        [x_center - width / 2, -0.28, width, 0.2]
+                    )
+
+                    face_ax.set_xlim(0, 1)
+                    face_ax.set_ylim(0, 1)
+                    face_ax.set_aspect("equal")
+                    face_ax.axis("off")
+
+                    # The white square of the dice
+                    face_ax.add_patch(FancyBboxPatch(
+                        (0.03, 0.03), 0.94, 0.94,
+                        boxstyle="round,pad=0,rounding_size=0.12",
+                        facecolor="white",
+                        edgecolor="black",
+                        linewidth=1.5
+                    ))
+
+                    # The black dots
+                    for (x, y) in DOT_POSITIONS[face]:
+                        face_ax.add_patch(
+                            Circle((x, y), 0.09, color="black")
+                        )
+
+            else:
+                # Too many sides for dot faces, so show plain numbers
+                ax.set_xticks(faces)
+                ax.set_xlabel("Dice Face")
+
+            plt.show()
+
+        except ImportError:
+            print("(Install matplotlib to see a graph: "
+                  "python -m pip install matplotlib)")
+
+    def clear_history(self):
+        self.history.clear()
+        self.save_history()
+        print("History cleared.")
+
+    def save_history(self):
+        with open(HISTORY_FILE, "w") as f:
+            for roll in self.history:
+                f.write(str(roll) + "\n")
+
+    def load_history(self):
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.isdigit():
+                        self.history.append(int(line))
+
+
+def get_sides():
+    while True:
+        try:
+            sides = int(input(
+                "How many sides does your dice have? (e.g. 6, 20): "
+            ))
+
+            if sides < 2:
+                print("A dice needs at least 2 sides.")
+            else:
+                return sides
+
+        except ValueError:
+            print("Please enter a valid number.")
+
+
+def main():
+    sides = get_sides()
+    dice = Dice(sides)
+
+    while True:
+
+        print("\n1. Roll Dice")
+        print("2. View History")
+        print("3. View Statistics")
+        print("4. Clear History")
+        print("5. Exit")
+
+        try:
+            choice = int(input("Enter your choice: "))
+
+            if choice == 1:
+
+                num = int(input(
+                    "How many dice do you want to roll? "
+                ))
+
+                if num <= 0:
+                    print("Please enter a number greater than 0.")
+                else:
+                    results = dice.roll(num)
+                    print("You rolled:", results)
+
+            elif choice == 2:
+                dice.show_history()
+
+            elif choice == 3:
+                dice.show_statistics()
+
+            elif choice == 4:
+                dice.clear_history()
+
+            elif choice == 5:
+                print("Goodbye!")
+                break
+
+            else:
+                print("Invalid choice. Please enter a number from 1 to 5.")
+
+        except ValueError:
+            print("Please enter a valid number.")
+
+
+if __name__ == "__main__":
+    main()
